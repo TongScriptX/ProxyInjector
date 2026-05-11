@@ -14,7 +14,7 @@
 ## 使用方法
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/TongScriptX/ProxyInjector/main/ProxyInjector.lua"))()
+loadstring(game:HttpGet("https://api.959966.xyz/proxy?url=" .. game:GetService("HttpService"):UrlEncode("https://raw.githubusercontent.com/TongScriptX/ProxyInjector/main/ProxyInjector.lua")))()
 ```
 
 ## 界面说明
