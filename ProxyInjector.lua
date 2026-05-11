@@ -22,14 +22,25 @@ local function loadScripts()
     return ok and data or {}
 end
 
+local function patchCode(s)
+    return (s:gsub('game:HttpGet%("(https://raw%.githubusercontent%.com/([^"]+))"%)', function(_, path)
+        return 'game:HttpGet("' .. PROXY_BASE .. path .. '")'
+    end))
+end
+
 local function executeScript(code)
     local s = code:match("^%s*(.-)%s*$")
     if s == "" then return end
     local ok, err
     if s:match("^https?://") then
-        ok, err = pcall(function() loadstring(proxyGet(s))() end)
+        ok, err = pcall(function() loadstring(patchCode(proxyGet(s)))() end)
     else
-        ok, err = pcall(loadstring(s))
+        local fn, compErr = loadstring(patchCode(s))
+        if not fn then
+            warn("[ProxyInjector] 编译错误:", compErr)
+            return
+        end
+        ok, err = pcall(fn)
     end
     if not ok then warn("[ProxyInjector]", err) end
 end
