@@ -14,7 +14,7 @@
 ## 使用方法
 
 ```lua
-loadstring(game:HttpGet("https://api.959966.xyz/proxy?url=" .. game:GetService("HttpService"):UrlEncode("https://raw.githubusercontent.com/TongScriptX/ProxyInjector/main/ProxyInjector.lua")))()
+loadstring(game:HttpGet("https://api.959966.xyz/github/raw/TongScriptX/ProxyInjector/main/ProxyInjector.lua"))()
 ```
 
 ## 界面说明
@@ -27,7 +27,7 @@ loadstring(game:HttpGet("https://api.959966.xyz/proxy?url=" .. game:GetService("
 
 ## 代理说明
 
-所有脚本通过 `https://api.959966.xyz/proxy?url=` 代理加载，确保安全性和稳定性。
+所有 GitHub raw 链接通过 `https://api.959966.xyz/github/raw/` 代理加载，确保安全性和稳定性。
 
 ## 许可证
 

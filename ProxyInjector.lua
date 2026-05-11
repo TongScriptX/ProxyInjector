@@ -6,12 +6,15 @@ local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local PROXY_URL = "https://api.959966.xyz/proxy?url="
+local PROXY_URL = "https://api.959966.xyz/github/raw/"
 local STORAGE_KEY = "ProxyInjector_Scripts"
 
 local function proxyLoad(url)
-    local encodedUrl = HttpService:UrlEncode(url)
-    return game:HttpGet(PROXY_URL .. encodedUrl)
+    if url:match("^https://raw%.githubusercontent%.com/(.+)$") then
+        local path = url:match("^https://raw%.githubusercontent%.com/(.+)$")
+        return game:HttpGet(PROXY_URL .. path)
+    end
+    return game:HttpGet(url)
 end
 
 local function saveScripts(scripts)
