@@ -54,10 +54,18 @@ local function createUI()
     dragCorner.CornerRadius = UDim.new(1, 0)
     dragCorner.Parent = dragButton
 
-    -- 主界面
+    -- 主界面 - 响应式尺寸
+    local viewportSize = workspace.CurrentCamera.ViewportSize
+    local isMobile = viewportSize.X < 600
+
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 380, 0, 520)
-    mainFrame.Position = UDim2.new(0.5, -190, 0.5, -260)
+    if isMobile then
+        mainFrame.Size = UDim2.new(0.95, 0, 0, 480)
+        mainFrame.Position = UDim2.new(0.5, 0, 0.5, -240)
+    else
+        mainFrame.Size = UDim2.new(0, 380, 0, 520)
+        mainFrame.Position = UDim2.new(0.5, -190, 0.5, -260)
+    end
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 33, 40)
     mainFrame.BorderSizePixel = 0
     mainFrame.Visible = false
@@ -112,7 +120,7 @@ local function createUI()
 
     -- 输入区域
     local inputFrame = Instance.new("Frame")
-    inputFrame.Size = UDim2.new(1, -30, 0, 200)
+    inputFrame.Size = UDim2.new(1, -30, 0, isMobile and 150 or 200)
     inputFrame.Position = UDim2.new(0, 15, 0, 65)
     inputFrame.BackgroundColor3 = Color3.fromRGB(40, 43, 50)
     inputFrame.BorderSizePixel = 0
@@ -130,7 +138,7 @@ local function createUI()
     scriptInput.PlaceholderText = "输入脚本URL或代码..."
     scriptInput.TextColor3 = Color3.new(1, 1, 1)
     scriptInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-    scriptInput.TextSize = 14
+    scriptInput.TextSize = isMobile and 12 or 14
     scriptInput.Font = Enum.Font.Code
     scriptInput.TextXAlignment = Enum.TextXAlignment.Left
     scriptInput.TextYAlignment = Enum.TextYAlignment.Top
@@ -141,21 +149,21 @@ local function createUI()
     -- 按钮区域
     local buttonFrame = Instance.new("Frame")
     buttonFrame.Size = UDim2.new(1, -30, 0, 40)
-    buttonFrame.Position = UDim2.new(0, 15, 0, 280)
+    buttonFrame.Position = UDim2.new(0, 15, 0, isMobile and 230 or 280)
     buttonFrame.BackgroundTransparency = 1
     buttonFrame.Parent = mainFrame
 
     local buttonLayout = Instance.new("UIListLayout")
     buttonLayout.FillDirection = Enum.FillDirection.Horizontal
-    buttonLayout.Padding = UDim.new(0, 10)
+    buttonLayout.Padding = UDim.new(0, isMobile and 5 or 10)
     buttonLayout.Parent = buttonFrame
 
     local function createButton(text, color)
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 105, 0, 40)
+        btn.Size = isMobile and UDim2.new(0.31, 0, 0, 36) or UDim2.new(0, 105, 0, 40)
         btn.BackgroundColor3 = color
         btn.Text = text
-        btn.TextSize = 14
+        btn.TextSize = isMobile and 12 or 14
         btn.Font = Enum.Font.GothamBold
         btn.TextColor3 = Color3.new(1, 1, 1)
         btn.BorderSizePixel = 0
@@ -174,8 +182,8 @@ local function createUI()
 
     -- 脚本列表
     local listFrame = Instance.new("ScrollingFrame")
-    listFrame.Size = UDim2.new(1, -30, 0, 160)
-    listFrame.Position = UDim2.new(0, 15, 0, 335)
+    listFrame.Size = UDim2.new(1, -30, 0, isMobile and 150 or 160)
+    listFrame.Position = UDim2.new(0, 15, 0, isMobile and 285 or 335)
     listFrame.BackgroundColor3 = Color3.fromRGB(40, 43, 50)
     listFrame.BorderSizePixel = 0
     listFrame.ScrollBarThickness = 6
