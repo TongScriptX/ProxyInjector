@@ -122,10 +122,42 @@ local function rewriteScriptSource(source)
     return patched
 end
 
+local function createRuntimeEnvironment()
+    local baseEnv = getfenv and getfenv(0) or _G
+    local proxyGame = {}
+
+    local function proxyHttpMethod(_, url, ...)
+        return game:HttpGet(buildProxyUrl(url), ...)
+    end
+
+    local function proxyGameIndex(_, key)
+        if key == "HttpGet" or key == "HttpGetAsync" then
+            return proxyHttpMethod
+        end
+        return game[key]
+    end
+
+    setmetatable(proxyGame, {
+        __index = proxyGameIndex,
+        __newindex = function(_, key, value)
+            game[key] = value
+        end
+    })
+
+    return setmetatable({
+        game = proxyGame
+    }, {
+        __index = baseEnv
+    })
+end
+
 local function compileAndRun(source)
     local chunk, compileError = loadstring(rewriteScriptSource(source))
     if not chunk then
         error("compile error: " .. tostring(compileError))
+    end
+    if setfenv then
+        setfenv(chunk, createRuntimeEnvironment())
     end
     return chunk()
 end
