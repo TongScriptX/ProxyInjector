@@ -32,8 +32,7 @@ end
 
 local function readState()
     local defaultState = {
-        proxyEndpoint = DEFAULT_PROXY_ENDPOINT,
-        favorites = {}
+        proxyEndpoint = DEFAULT_PROXY_ENDPOINT
     }
 
     local ok, data = pcall(function()
@@ -48,7 +47,6 @@ local function readState()
     end
 
     data.proxyEndpoint = trim(data.proxyEndpoint) ~= "" and trim(data.proxyEndpoint) or DEFAULT_PROXY_ENDPOINT
-    data.favorites = type(data.favorites) == "table" and data.favorites or {}
     return data
 end
 
@@ -143,16 +141,6 @@ local function executeInput(rawInput)
     return compileAndRun(input)
 end
 
-local function inferName(value)
-    local input = trim(value)
-    if isHttpUrl(input) then
-        local lastPart = input:match("/([^/?#]+)[^/]*$") or input
-        return trim(lastPart:gsub("%%20", " "))
-    end
-    local firstLine = input:match("([^\n\r]+)") or input
-    return trim(firstLine):sub(1, 28)
-end
-
 if playerGui:FindFirstChild(APP_NAME) then
     playerGui[APP_NAME]:Destroy()
 end
@@ -166,11 +154,11 @@ screenGui.Parent = playerGui
 
 local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
 local isLandscape = viewport.X >= viewport.Y
-local isPortrait = not isLandscape
-local panelWidth = math.min(math.floor(viewport.X * 0.94), isLandscape and 960 or 460)
-local panelHeight = math.min(math.floor(viewport.Y * (isLandscape and 0.9 or 0.94)), isLandscape and 620 or 760)
-local leftWidth = isLandscape and math.floor(panelWidth * 0.62) or (panelWidth - 32)
-local rightWidth = isLandscape and (panelWidth - leftWidth - 44) or (panelWidth - 32)
+local panelWidth = math.clamp(math.floor(viewport.X * (isLandscape and 0.82 or 0.94)), 340, isLandscape and 980 or 520)
+local panelHeight = math.clamp(math.floor(viewport.Y * (isLandscape and 0.84 or 0.9)), 360, isLandscape and 720 or 820)
+local sectionGap = 12
+local bodyHeight = panelHeight - 154
+local editorSectionHeight = math.max(220, math.floor(bodyHeight * (isLandscape and 0.62 or 0.56)))
 
 local palette = {
     bg = Color3.fromRGB(10, 14, 24),
@@ -306,29 +294,31 @@ statusLabel.Position = UDim2.fromOffset(32, 0)
 statusLabel.Size = UDim2.new(1, -44, 1, 0)
 statusLabel.ZIndex = 7
 
-local body = Instance.new("Frame")
+local body = Instance.new("ScrollingFrame")
 body.Size = UDim2.new(1, -24, 1, -142)
 body.Position = UDim2.fromOffset(12, 136)
 body.BackgroundTransparency = 1
+body.BorderSizePixel = 0
+body.ScrollBarThickness = 4
+body.ScrollBarImageColor3 = palette.primary
+body.CanvasSize = UDim2.new()
+body.AutomaticCanvasSize = Enum.AutomaticSize.Y
 body.Parent = panel
 body.ZIndex = 6
+
+local bodyLayout = Instance.new("UIListLayout")
+bodyLayout.Padding = UDim.new(0, sectionGap)
+bodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+bodyLayout.Parent = body
+
+local bodyPadding = Instance.new("UIPadding")
+bodyPadding.PaddingBottom = UDim.new(0, 2)
+bodyPadding.Parent = body
 
 local function setStatus(text, color)
     statusLabel.Text = text
     statusDot.BackgroundColor3 = color or palette.primary
 end
-
-local leftColumn = Instance.new("Frame")
-leftColumn.Size = isPortrait and UDim2.new(1, 0, 0, 410) or UDim2.new(0, leftWidth, 1, 0)
-leftColumn.BackgroundTransparency = 1
-leftColumn.Parent = body
-leftColumn.ZIndex = 6
-
-local leftLayout = Instance.new("UIListLayout")
-leftLayout.Padding = UDim.new(0, 10)
-leftLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-leftLayout.SortOrder = Enum.SortOrder.LayoutOrder
-leftLayout.Parent = leftColumn
 
 local function makeSection(parent, titleText, height)
     local section = Instance.new("Frame")
@@ -348,7 +338,7 @@ local function makeSection(parent, titleText, height)
     return section
 end
 
-local proxySection = makeSection(leftColumn, "代理端点", 84)
+local proxySection = makeSection(body, "代理端点", 84)
 local proxyBox = Instance.new("TextBox")
 proxyBox.Size = UDim2.new(1, -28, 0, 38)
 proxyBox.Position = UDim2.fromOffset(14, 32)
@@ -367,10 +357,9 @@ proxyBox.ZIndex = 7
 round(proxyBox, 10)
 stroke(proxyBox, palette.border, 1, 0.25)
 
-local editorHeight = isPortrait and 228 or 238
-local editorSection = makeSection(leftColumn, "脚本 / 链接", 40 + editorHeight)
+local editorSection = makeSection(body, "脚本 / 链接", editorSectionHeight)
 local editorBox = Instance.new("TextBox")
-editorBox.Size = UDim2.new(1, -28, 0, editorHeight)
+editorBox.Size = UDim2.new(1, -28, 1, -46)
 editorBox.Position = UDim2.fromOffset(14, 32)
 editorBox.BackgroundColor3 = palette.panel
 editorBox.BorderSizePixel = 0
@@ -396,78 +385,45 @@ editorPadding.PaddingTop = UDim.new(0, 8)
 editorPadding.PaddingBottom = UDim.new(0, 8)
 editorPadding.Parent = editorBox
 
-local actionSection = makeSection(leftColumn, "操作", isPortrait and 136 or 92)
+local actionSection = makeSection(body, "操作", isLandscape and 92 or 136)
 local actionRow = Instance.new("Frame")
-actionRow.Size = UDim2.new(1, -28, 0, isPortrait and 82 or 40)
+actionRow.Size = UDim2.new(1, -28, 0, isLandscape and 40 or 82)
 actionRow.Position = UDim2.fromOffset(14, 34)
 actionRow.BackgroundTransparency = 1
 actionRow.Parent = actionSection
 actionRow.ZIndex = 7
 
-local actionLayout = Instance.new(isPortrait and "UIGridLayout" or "UIListLayout")
+local actionLayout = Instance.new(isLandscape and "UIListLayout" or "UIGridLayout")
 actionLayout.SortOrder = Enum.SortOrder.LayoutOrder
 actionLayout.Parent = actionRow
 
-if isPortrait then
-    actionLayout.CellPadding = UDim2.fromOffset(8, 8)
-    actionLayout.CellSize = UDim2.new(0.5, -4, 0, 36)
-else
+if isLandscape then
     actionLayout.FillDirection = Enum.FillDirection.Horizontal
     actionLayout.Padding = UDim.new(0, 8)
+else
+    actionLayout.CellPadding = UDim2.fromOffset(8, 8)
+    actionLayout.CellSize = UDim2.new(0.5, -4, 0, 36)
 end
 
 local runButton = createButton(actionRow, "运行", palette.success)
-runButton.Size = isPortrait and UDim2.new() or UDim2.new(0.26, -6, 1, 0)
+runButton.Size = isLandscape and UDim2.new(0.28, -6, 1, 0) or UDim2.new()
 runButton.ZIndex = 8
 
-local saveButton = createButton(actionRow, "保存", palette.warn)
-saveButton.Size = isPortrait and UDim2.new() or UDim2.new(0.22, -6, 1, 0)
-saveButton.ZIndex = 8
-
 local copyProxyButton = createButton(actionRow, "复制代理链接", palette.primarySoft)
-copyProxyButton.Size = isPortrait and UDim2.new() or UDim2.new(0.32, -6, 1, 0)
+copyProxyButton.Size = isLandscape and UDim2.new(0.42, -6, 1, 0) or UDim2.new()
 copyProxyButton.ZIndex = 8
 
 local clearButton = createButton(actionRow, "清空", palette.danger)
-clearButton.Size = isPortrait and UDim2.new() or UDim2.new(0.2, -6, 1, 0)
+clearButton.Size = isLandscape and UDim2.new(0.3, -6, 1, 0) or UDim2.new()
 clearButton.ZIndex = 8
 
-local rightColumn = Instance.new("Frame")
-rightColumn.Size = isPortrait and UDim2.new(1, 0, 0, 0) or UDim2.new(0, rightWidth, 1, 0)
-rightColumn.Position = isPortrait and UDim2.fromOffset(0, 420) or UDim2.new(0, leftWidth + 20, 0, 0)
-rightColumn.AutomaticSize = isPortrait and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
-rightColumn.BackgroundTransparency = 1
-rightColumn.Parent = body
-rightColumn.ZIndex = 6
-
-if isPortrait then
-    body.AutomaticSize = Enum.AutomaticSize.Y
-    panel.Size = UDim2.fromOffset(panelWidth, math.min(panelHeight, viewport.Y - 20))
-end
-
-local favoritesSection = makeSection(rightColumn, "已保存脚本", isPortrait and 260 or body.AbsoluteSize.Y)
-favoritesSection.Size = isPortrait and UDim2.new(1, 0, 0, 260) or UDim2.new(1, 0, 1, 0)
-
-local favoritesList = Instance.new("ScrollingFrame")
-favoritesList.Size = UDim2.new(1, -20, 1, -48)
-favoritesList.Position = UDim2.fromOffset(10, 34)
-favoritesList.BackgroundTransparency = 1
-favoritesList.BorderSizePixel = 0
-favoritesList.ScrollBarThickness = 4
-favoritesList.ScrollBarImageColor3 = palette.primary
-favoritesList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-favoritesList.CanvasSize = UDim2.new()
-favoritesList.Parent = favoritesSection
-favoritesList.ZIndex = 7
-
-local favoritesLayout = Instance.new("UIListLayout")
-favoritesLayout.Padding = UDim.new(0, 8)
-favoritesLayout.SortOrder = Enum.SortOrder.LayoutOrder
-favoritesLayout.Parent = favoritesList
-
-local favoritesPadding = Instance.new("UIPadding")
-favoritesPadding.PaddingBottom = UDim.new(0, 2)
-favoritesPadding.Parent = favoritesList
+local helpSection = makeSection(body, "说明", 92)
+local helpText = createLabel(helpSection, "支持直接输入 Lua 代码，或粘贴任意 http/https 脚本链接。运行时会自动把常见 HttpGet 调用转换为代理地址。", 12, false, palette.muted)
+helpText.Position = UDim2.fromOffset(14, 34)
+helpText.Size = UDim2.new(1, -28, 0, 44)
+helpText.TextWrapped = true
+helpText.TextYAlignment = Enum.TextYAlignment.Top
+helpText.ZIndex = 7
 
 local function persistProxyEndpoint()
     state.proxyEndpoint = normalizeProxyEndpoint(proxyBox.Text)
@@ -479,112 +435,6 @@ proxyBox.FocusLost:Connect(function()
     persistProxyEndpoint()
     setStatus("代理端点已更新", palette.primary)
 end)
-
-local function getFavoritesArray()
-    local favorites = {}
-    for _, item in ipairs(state.favorites) do
-        if type(item) == "table" and trim(item.name) ~= "" and trim(item.value) ~= "" then
-            favorites[#favorites + 1] = {
-                name = trim(item.name),
-                value = trim(item.value)
-            }
-        end
-    end
-    return favorites
-end
-
-local function refreshFavorites()
-    for _, child in ipairs(favoritesList:GetChildren()) do
-        if child:IsA("Frame") then
-            child:Destroy()
-        end
-    end
-
-    state.favorites = getFavoritesArray()
-    writeState(state)
-
-    if #state.favorites == 0 then
-        local empty = Instance.new("Frame")
-        empty.Size = UDim2.new(1, 0, 0, 72)
-        empty.BackgroundColor3 = palette.panel
-        empty.BorderSizePixel = 0
-        empty.Parent = favoritesList
-        empty.ZIndex = 7
-        round(empty, 12)
-        stroke(empty, palette.border, 1, 0.35)
-
-        local emptyText = createLabel(empty, "还没有保存脚本", 13, true, palette.muted)
-        emptyText.Size = UDim2.new(1, -24, 1, 0)
-        emptyText.Position = UDim2.fromOffset(12, 0)
-        emptyText.ZIndex = 8
-        return
-    end
-
-    for index, item in ipairs(state.favorites) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, 0, 0, 82)
-        row.BackgroundColor3 = palette.panel
-        row.BorderSizePixel = 0
-        row.Parent = favoritesList
-        row.ZIndex = 7
-        round(row, 12)
-        stroke(row, palette.border, 1, 0.3)
-
-        local nameLabel = createLabel(row, item.name, 13, true)
-        nameLabel.Position = UDim2.fromOffset(12, 10)
-        nameLabel.Size = UDim2.new(1, -100, 0, 18)
-        nameLabel.ZIndex = 8
-
-        local valueLabel = createLabel(row, item.value, 11, false, palette.muted)
-        valueLabel.Position = UDim2.fromOffset(12, 30)
-        valueLabel.Size = UDim2.new(1, -24, 0, 18)
-        valueLabel.TextTruncate = Enum.TextTruncate.AtEnd
-        valueLabel.ZIndex = 8
-
-        local useButton = createButton(row, "载入", palette.success, 56)
-        useButton.Position = UDim2.new(1, -136, 1, -34)
-        useButton.Size = UDim2.fromOffset(56, 24)
-        useButton.TextSize = 11
-        useButton.ZIndex = 8
-
-        local runSavedButton = createButton(row, "运行", palette.primarySoft, 56)
-        runSavedButton.Position = UDim2.new(1, -72, 1, -34)
-        runSavedButton.Size = UDim2.fromOffset(56, 24)
-        runSavedButton.TextSize = 11
-        runSavedButton.ZIndex = 8
-
-        local deleteButton = createButton(row, "删", palette.danger, 24)
-        deleteButton.Position = UDim2.new(1, -40, 0, 10)
-        deleteButton.Size = UDim2.fromOffset(24, 24)
-        deleteButton.TextSize = 11
-        deleteButton.ZIndex = 8
-
-        useButton.MouseButton1Click:Connect(function()
-            editorBox.Text = item.value
-            setStatus("已载入: " .. item.name, palette.primary)
-        end)
-
-        runSavedButton.MouseButton1Click:Connect(function()
-            persistProxyEndpoint()
-            setStatus("执行中: " .. item.name, palette.warn)
-            local ok, err = pcall(function()
-                executeInput(item.value)
-            end)
-            if ok then
-                setStatus("执行完成: " .. item.name, palette.success)
-            else
-                warn("[" .. APP_NAME .. "]", err)
-                setStatus("执行失败: " .. tostring(err), palette.danger)
-            end
-        end)
-
-        deleteButton.MouseButton1Click:Connect(function()
-            table.remove(state.favorites, index)
-            refreshFavorites()
-            setStatus("已删除: " .. item.name, palette.danger)
-        end)
-    end
-end
 
 runButton.MouseButton1Click:Connect(function()
     persistProxyEndpoint()
@@ -598,23 +448,6 @@ runButton.MouseButton1Click:Connect(function()
         warn("[" .. APP_NAME .. "]", err)
         setStatus("执行失败: " .. tostring(err), palette.danger)
     end
-end)
-
-saveButton.MouseButton1Click:Connect(function()
-    local value = trim(editorBox.Text)
-    if value == "" then
-        setStatus("没有可保存的内容", palette.danger)
-        return
-    end
-
-    local entry = {
-        name = inferName(value),
-        value = value
-    }
-
-    state.favorites[#state.favorites + 1] = entry
-    refreshFavorites()
-    setStatus("已保存: " .. entry.name, palette.success)
 end)
 
 copyProxyButton.MouseButton1Click:Connect(function()
@@ -705,5 +538,4 @@ fab.MouseButton1Click:Connect(function()
     end
 end)
 
-refreshFavorites()
 setStatus("就绪，可直接执行任意链接", palette.primary)
