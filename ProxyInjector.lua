@@ -126,7 +126,6 @@ local function buildProxyEnvironment(baseEnv)
     local proxyEnv
     local proxyGame = {}
     local proxyHttpService = {}
-    local baseGetfenv = getfenv
 
     local function compileWithProxy(source, chunkName)
         local chunk, compileError = loadstring(rewriteScriptSource(source), chunkName)
@@ -164,12 +163,6 @@ local function buildProxyEnvironment(baseEnv)
         return HttpService:RequestAsync(request)
     end
 
-    local function wrapMethod(target, original)
-        return function(_, ...)
-            return original(target, ...)
-        end
-    end
-
     local function proxyHttpServiceIndex(_, key)
         if key == "GetAsync" then
             return function(_, url, ...)
@@ -187,11 +180,7 @@ local function buildProxyEnvironment(baseEnv)
             end
         end
 
-        local value = HttpService[key]
-        if type(value) == "function" then
-            return wrapMethod(HttpService, value)
-        end
-        return value
+        return HttpService[key]
     end
 
     local function proxyGameIndex(_, key)
@@ -207,12 +196,7 @@ local function buildProxyEnvironment(baseEnv)
                 return service
             end
         end
-
-        local value = game[key]
-        if type(value) == "function" then
-            return wrapMethod(game, value)
-        end
-        return value
+        return game[key]
     end
 
     setmetatable(proxyHttpService, {
@@ -231,27 +215,8 @@ local function buildProxyEnvironment(baseEnv)
 
     proxyEnv = setmetatable({
         game = proxyGame,
-        Game = proxyGame,
         loadstring = function(source, chunkName)
             return compileWithProxy(source, chunkName)
-        end,
-        getfenv = function(target)
-            if target == nil or target == 0 then
-                return proxyEnv
-            end
-            if type(target) == "number" and target <= 1 then
-                return proxyEnv
-            end
-            if baseGetfenv then
-                local ok, env = pcall(baseGetfenv, target)
-                if ok and env == baseEnv then
-                    return proxyEnv
-                end
-                if ok then
-                    return env
-                end
-            end
-            return proxyEnv
         end,
         load = function(ld, chunkName, mode, env)
             local source
@@ -281,8 +246,6 @@ local function buildProxyEnvironment(baseEnv)
     }, {
         __index = baseEnv
     })
-
-    proxyEnv._G = proxyEnv
 
     return proxyEnv, compileWithProxy
 end
