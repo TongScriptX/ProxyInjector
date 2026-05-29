@@ -125,6 +125,7 @@ end
 local function buildProxyEnvironment(baseEnv)
     local proxyEnv
     local proxyGame = {}
+    local proxyHttpService = {}
 
     local function compileWithProxy(source, chunkName)
         local chunk, compileError = loadstring(rewriteScriptSource(source), chunkName)
@@ -141,12 +142,84 @@ local function buildProxyEnvironment(baseEnv)
         return game:HttpGet(buildProxyUrl(url), ...)
     end
 
+    local function proxyAsyncRequest(url, ...)
+        return HttpService:GetAsync(buildProxyUrl(url), ...)
+    end
+
+    local function proxyPostRequest(url, data, contentType, compress)
+        return HttpService:PostAsync(buildProxyUrl(url), data, contentType, compress)
+    end
+
+    local function proxyRequestAsync(requestOptions)
+        local request = type(requestOptions) == "table" and table.clone and table.clone(requestOptions) or requestOptions
+        if type(request) ~= "table" then
+            error("RequestAsync expects request table")
+        end
+        if request.Url then
+            request.Url = buildProxyUrl(request.Url)
+        elseif request.url then
+            request.url = buildProxyUrl(request.url)
+        end
+        return HttpService:RequestAsync(request)
+    end
+
+    local function wrapMethod(target, original)
+        return function(_, ...)
+            return original(target, ...)
+        end
+    end
+
+    local function proxyHttpServiceIndex(_, key)
+        if key == "GetAsync" then
+            return function(_, url, ...)
+                return proxyAsyncRequest(url, ...)
+            end
+        end
+        if key == "PostAsync" then
+            return function(_, url, data, contentType, compress)
+                return proxyPostRequest(url, data, contentType, compress)
+            end
+        end
+        if key == "RequestAsync" then
+            return function(_, request)
+                return proxyRequestAsync(request)
+            end
+        end
+
+        local value = HttpService[key]
+        if type(value) == "function" then
+            return wrapMethod(HttpService, value)
+        end
+        return value
+    end
+
     local function proxyGameIndex(_, key)
         if key == "HttpGet" or key == "HttpGetAsync" then
             return proxyHttpMethod
         end
-        return game[key]
+        if key == "GetService" then
+            return function(_, serviceName)
+                local service = game:GetService(serviceName)
+                if serviceName == "HttpService" then
+                    return proxyHttpService
+                end
+                return service
+            end
+        end
+
+        local value = game[key]
+        if type(value) == "function" then
+            return wrapMethod(game, value)
+        end
+        return value
     end
+
+    setmetatable(proxyHttpService, {
+        __index = proxyHttpServiceIndex,
+        __newindex = function(_, key, value)
+            HttpService[key] = value
+        end
+    })
 
     setmetatable(proxyGame, {
         __index = proxyGameIndex,
