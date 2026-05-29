@@ -78,7 +78,9 @@ local function buildProxyUrl(targetUrl)
     local endpoint = normalizeProxyEndpoint(state.proxyEndpoint)
     local encodedTarget = HttpService:UrlEncode(cleanTarget)
     if endpoint:find("{url}", 1, true) then
-        return endpoint:gsub("{url}", encodedTarget)
+        return (endpoint:gsub("{url}", function()
+            return encodedTarget
+        end))
     end
     if endpoint:find("url=", 1, true) then
         return endpoint .. encodedTarget
