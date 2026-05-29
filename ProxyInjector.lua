@@ -122,9 +122,20 @@ local function rewriteScriptSource(source)
     return patched
 end
 
-local function createRuntimeEnvironment()
-    local baseEnv = getfenv and getfenv(0) or _G
+local function buildProxyEnvironment(baseEnv)
+    local proxyEnv
     local proxyGame = {}
+
+    local function compileWithProxy(source, chunkName)
+        local chunk, compileError = loadstring(rewriteScriptSource(source), chunkName)
+        if not chunk then
+            return nil, compileError
+        end
+        if setfenv then
+            setfenv(chunk, proxyEnv)
+        end
+        return chunk
+    end
 
     local function proxyHttpMethod(_, url, ...)
         return game:HttpGet(buildProxyUrl(url), ...)
@@ -144,11 +155,47 @@ local function createRuntimeEnvironment()
         end
     })
 
-    return setmetatable({
-        game = proxyGame
+    proxyEnv = setmetatable({
+        game = proxyGame,
+        loadstring = function(source, chunkName)
+            return compileWithProxy(source, chunkName)
+        end,
+        load = function(ld, chunkName, mode, env)
+            local source
+            if type(ld) == "function" then
+                local parts = {}
+                while true do
+                    local part = ld()
+                    if part == nil then
+                        break
+                    end
+                    parts[#parts + 1] = part
+                end
+                source = table.concat(parts)
+            else
+                source = tostring(ld or "")
+            end
+
+            local chunk, compileError = loadstring(rewriteScriptSource(source), chunkName)
+            if not chunk then
+                return nil, compileError
+            end
+            if setfenv then
+                setfenv(chunk, env or proxyEnv)
+            end
+            return chunk
+        end
     }, {
         __index = baseEnv
     })
+
+    return proxyEnv, compileWithProxy
+end
+
+local function createRuntimeEnvironment()
+    local baseEnv = getfenv and getfenv(0) or _G
+    local proxyEnv = buildProxyEnvironment(baseEnv)
+    return proxyEnv
 end
 
 local function compileAndRun(source)
