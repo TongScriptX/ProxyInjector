@@ -165,11 +165,12 @@ screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
 local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
-local compact = math.min(viewport.X, viewport.Y) < 560
-local panelWidth = math.min(math.floor(viewport.X * 0.94), compact and 420 or 960)
-local panelHeight = math.min(math.floor(viewport.Y * 0.9), compact and 620 or 620)
-local leftWidth = compact and (panelWidth - 32) or math.floor(panelWidth * 0.62)
-local rightWidth = compact and (panelWidth - 32) or (panelWidth - leftWidth - 44)
+local isLandscape = viewport.X >= viewport.Y
+local isPortrait = not isLandscape
+local panelWidth = math.min(math.floor(viewport.X * 0.94), isLandscape and 960 or 460)
+local panelHeight = math.min(math.floor(viewport.Y * (isLandscape and 0.9 or 0.94)), isLandscape and 620 or 760)
+local leftWidth = isLandscape and math.floor(panelWidth * 0.62) or (panelWidth - 32)
+local rightWidth = isLandscape and (panelWidth - leftWidth - 44) or (panelWidth - 32)
 
 local palette = {
     bg = Color3.fromRGB(10, 14, 24),
@@ -318,7 +319,7 @@ local function setStatus(text, color)
 end
 
 local leftColumn = Instance.new("Frame")
-leftColumn.Size = compact and UDim2.new(1, 0, 0, 350) or UDim2.new(0, leftWidth, 1, 0)
+leftColumn.Size = isPortrait and UDim2.new(1, 0, 0, 410) or UDim2.new(0, leftWidth, 1, 0)
 leftColumn.BackgroundTransparency = 1
 leftColumn.Parent = body
 leftColumn.ZIndex = 6
@@ -366,7 +367,7 @@ proxyBox.ZIndex = 7
 round(proxyBox, 10)
 stroke(proxyBox, palette.border, 1, 0.25)
 
-local editorHeight = compact and 184 or 238
+local editorHeight = isPortrait and 228 or 238
 local editorSection = makeSection(leftColumn, "脚本 / 链接", 40 + editorHeight)
 local editorBox = Instance.new("TextBox")
 editorBox.Size = UDim2.new(1, -28, 0, editorHeight)
@@ -395,47 +396,57 @@ editorPadding.PaddingTop = UDim.new(0, 8)
 editorPadding.PaddingBottom = UDim.new(0, 8)
 editorPadding.Parent = editorBox
 
-local actionSection = makeSection(leftColumn, "操作", 92)
+local actionSection = makeSection(leftColumn, "操作", isPortrait and 136 or 92)
 local actionRow = Instance.new("Frame")
-actionRow.Size = UDim2.new(1, -28, 0, 40)
+actionRow.Size = UDim2.new(1, -28, 0, isPortrait and 82 or 40)
 actionRow.Position = UDim2.fromOffset(14, 34)
 actionRow.BackgroundTransparency = 1
 actionRow.Parent = actionSection
 actionRow.ZIndex = 7
 
-local actionLayout = Instance.new("UIListLayout")
-actionLayout.FillDirection = Enum.FillDirection.Horizontal
-actionLayout.Padding = UDim.new(0, 8)
+local actionLayout = Instance.new(isPortrait and "UIGridLayout" or "UIListLayout")
 actionLayout.SortOrder = Enum.SortOrder.LayoutOrder
 actionLayout.Parent = actionRow
 
-local runButton = createButton(actionRow, "执行", palette.success)
-runButton.Size = UDim2.new(0.34, -6, 1, 0)
+if isPortrait then
+    actionLayout.CellPadding = UDim2.fromOffset(8, 8)
+    actionLayout.CellSize = UDim2.new(0.5, -4, 0, 36)
+else
+    actionLayout.FillDirection = Enum.FillDirection.Horizontal
+    actionLayout.Padding = UDim.new(0, 8)
+end
+
+local runButton = createButton(actionRow, "运行", palette.success)
+runButton.Size = isPortrait and UDim2.new() or UDim2.new(0.26, -6, 1, 0)
 runButton.ZIndex = 8
 
 local saveButton = createButton(actionRow, "保存", palette.warn)
-saveButton.Size = UDim2.new(0.33, -5, 1, 0)
+saveButton.Size = isPortrait and UDim2.new() or UDim2.new(0.22, -6, 1, 0)
 saveButton.ZIndex = 8
 
 local copyProxyButton = createButton(actionRow, "复制代理链接", palette.primarySoft)
-copyProxyButton.Size = UDim2.new(0.33, -5, 1, 0)
+copyProxyButton.Size = isPortrait and UDim2.new() or UDim2.new(0.32, -6, 1, 0)
 copyProxyButton.ZIndex = 8
 
+local clearButton = createButton(actionRow, "清空", palette.danger)
+clearButton.Size = isPortrait and UDim2.new() or UDim2.new(0.2, -6, 1, 0)
+clearButton.ZIndex = 8
+
 local rightColumn = Instance.new("Frame")
-rightColumn.Size = compact and UDim2.new(1, 0, 0, 0) or UDim2.new(0, rightWidth, 1, 0)
-rightColumn.Position = compact and UDim2.fromOffset(0, 360) or UDim2.new(0, leftWidth + 20, 0, 0)
-rightColumn.AutomaticSize = compact and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
+rightColumn.Size = isPortrait and UDim2.new(1, 0, 0, 0) or UDim2.new(0, rightWidth, 1, 0)
+rightColumn.Position = isPortrait and UDim2.fromOffset(0, 420) or UDim2.new(0, leftWidth + 20, 0, 0)
+rightColumn.AutomaticSize = isPortrait and Enum.AutomaticSize.Y or Enum.AutomaticSize.None
 rightColumn.BackgroundTransparency = 1
 rightColumn.Parent = body
 rightColumn.ZIndex = 6
 
-if compact then
+if isPortrait then
     body.AutomaticSize = Enum.AutomaticSize.Y
-    panel.Size = UDim2.fromOffset(panelWidth, math.min(panelHeight + 180, viewport.Y - 20))
+    panel.Size = UDim2.fromOffset(panelWidth, math.min(panelHeight, viewport.Y - 20))
 end
 
-local favoritesSection = makeSection(rightColumn, "已保存脚本", compact and 248 or body.AbsoluteSize.Y)
-favoritesSection.Size = compact and UDim2.new(1, 0, 0, 248) or UDim2.new(1, 0, 1, 0)
+local favoritesSection = makeSection(rightColumn, "已保存脚本", isPortrait and 260 or body.AbsoluteSize.Y)
+favoritesSection.Size = isPortrait and UDim2.new(1, 0, 0, 260) or UDim2.new(1, 0, 1, 0)
 
 local favoritesList = Instance.new("ScrollingFrame")
 favoritesList.Size = UDim2.new(1, -20, 1, -48)
@@ -628,6 +639,11 @@ copyProxyButton.MouseButton1Click:Connect(function()
     else
         setStatus("代理链接: " .. proxied, palette.primary)
     end
+end)
+
+clearButton.MouseButton1Click:Connect(function()
+    editorBox.Text = ""
+    setStatus("已清空输入", palette.primary)
 end)
 
 local function setPanelVisible(visible)
