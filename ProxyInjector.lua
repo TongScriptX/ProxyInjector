@@ -126,6 +126,7 @@ local function buildProxyEnvironment(baseEnv)
     local proxyEnv
     local proxyGame = {}
     local proxyHttpService = {}
+    local baseGetfenv = getfenv
 
     local function compileWithProxy(source, chunkName)
         local chunk, compileError = loadstring(rewriteScriptSource(source), chunkName)
@@ -230,8 +231,27 @@ local function buildProxyEnvironment(baseEnv)
 
     proxyEnv = setmetatable({
         game = proxyGame,
+        Game = proxyGame,
         loadstring = function(source, chunkName)
             return compileWithProxy(source, chunkName)
+        end,
+        getfenv = function(target)
+            if target == nil or target == 0 then
+                return proxyEnv
+            end
+            if type(target) == "number" and target <= 1 then
+                return proxyEnv
+            end
+            if baseGetfenv then
+                local ok, env = pcall(baseGetfenv, target)
+                if ok and env == baseEnv then
+                    return proxyEnv
+                end
+                if ok then
+                    return env
+                end
+            end
+            return proxyEnv
         end,
         load = function(ld, chunkName, mode, env)
             local source
@@ -261,6 +281,8 @@ local function buildProxyEnvironment(baseEnv)
     }, {
         __index = baseEnv
     })
+
+    proxyEnv._G = proxyEnv
 
     return proxyEnv, compileWithProxy
 end
